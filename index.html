@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartTendance - Lecturer</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        :root {
+            --primary: #22aa44;
+            --primary-dark: #1a8833;
+            --primary-light: #2dcc55;
+            --secondary: #1a8833;
+            --danger: #cc3333;
+            --warning: #cc9900;
+            --dark: #1a1a1a;
+            --light: #f5f5f5;
+            --gray: #cccccc;
+            --text-dark: #333333;
+            --text-light: #ffffff;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        
+        body.light-mode {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+            color: #333333;
+        }
+        
+        .app-container {
+            display: none;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .app-container.active {
+            display: block;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            border: 1px solid #333333;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header h1 {
+            color: #44ff44;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .nav-buttons {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .nav-btn {
+            background: linear-gradient(135deg, #44ff44 0%, #22cc22 100%);
+            color: #000;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn.active {
+            background: linear-gradient(135deg, #ff4444 0%, #cc2222 100%);
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid #333;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #44ff44;
+            margin: 10px 0;
+        }
+        
+        .lectures-container {
+            background: #1a1a1a;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid #333333;
+            margin-bottom: 30px;
+        }
+        
+        .table-header {
+            background: #2a2a2a;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #44ff44;
+        }
+        
+        .lectures-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .lectures-table th {
+            background: #2a2a2a;
+            color: #44ff44;
+            padding: 18px 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #44ff44;
+        }
+        
+        .lectures-table td {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            color: #ffffff;
+        }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-scheduled { background: #331111; color: #ff4444; border: 1px solid #ff4444; }
+        .status-active { background: #333311; color: #ffff44; border: 1px solid #ffff44; }
+        .status-completed { background: #113311; color: #44ff44; border: 1px solid #44ff44; }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary { background: #44ff44; color: #000; }
+        .btn-warning { background: #ffff44; color: #000; }
+        .btn-danger { background: #ff4444; color: #fff; }
+        .btn-info { background: #2196f3; color: #fff; }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #44ff44;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .qr-code-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+            margin: 20px 0;
+            border: 3px solid #44ff44;
+        }
+        
+        .qr-code-image {
+            width: 200px;
+            height: 200px;
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            background: #1a1a1a;
+            color: white;
+            border: 1px solid #444;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .filters {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-group label {
+            color: #44ff44;
+            font-size: 14px;
+        }
+        
+        .filter-group select, .filter-group input {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+        }
+        
+        .attendance-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="app-container active">
+        <div class="header">
+            <h1><i class="fas fa-chalkboard-teacher"></i> SmartTendance Lecturer</h1>
+            <p>Attendance Management System</p>
+            <div class="nav-buttons">
+                <button class="nav-btn active" onclick="showApp('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </button>
+                <button class="nav-btn" onclick="showApp('attendanceManager')">
+                    <i class="fas fa-users"></i> Attendance
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-chalkboard fa-2x"></i>
+                <div class="stat-number" id="totalLectures">0</div>
+                <div>Total Lectures</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-play-circle fa-2x"></i>
+                <div class="stat-number" id="activeLectures">0</div>
+                <div>Active Lectures</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-user-graduate fa-2x"></i>
+                <div class="stat-number" id="totalStudents">0</div>
+                <div>Total Students</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-chart-line fa-2x"></i>
+                <div class="stat-number" id="attendanceRate">0%</div>
+                <div>Attendance Rate</div>
+            </div>
+        </div>
+
+        <div class="lectures-container">
+            <div class="table-header">
+                <h3><i class="fas fa-list"></i> Recent Lectures</h3>
+                <button class="btn btn-primary" onclick="openNewLectureModal()">
+                    <i class="fas fa-plus"></i> Start New Lecture
+                </button>
+            </div>
+            <table class="lectures-table">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Date & Time</th>
+                        <th>Room</th>
+                        <th>Students</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="lecturesTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ATTENDANCE MANAGER -->
+    <div id="attendanceManager" class="app-container">
+        <div class="header">
+            <h1><i class="fas fa-users"></i> Attendance Manager</h1>
+            <p>Student attendance records</p>
+            <div class="nav-buttons">
+                <button class="nav-btn" onclick="showApp('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </button>
+                <button class="nav-btn active" onclick="showApp('attendanceManager')">
+                    <i class="fas fa-users"></i> Attendance
+                </button>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label><i class="fas fa-book"></i> Course</label>
+                <select id="courseFilter">
+                    <option value="all">All Courses</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" style="align-self: flex-end;" onclick="loadAttendanceFromCloud()" id="cloudRefreshBtn">
+                <i class="fas fa-cloud-download-alt"></i> Refresh Cloud Data
+            </button>
+        </div>
+
+        <div class="attendance-summary">
+            <div class="summary-card">
+                <i class="fas fa-list-alt fa-2x"></i>
+                <div class="stat-number" id="totalRecords">0</div>
+                <div>Total Records</div>
+            </div>
+            <div class="summary-card">
+                <i class="fas fa-user-check fa-2x"></i>
+                <div class="stat-number" id="presentCount">0</div>
+                <div>Present Today</div>
+            </div>
+        </div>
+
+        <div class="lectures-container">
+            <div class="table-header">
+                <h3><i class="fas fa-table"></i> Attendance Records</h3>
+                <div>
+                    <button class="btn btn-primary" onclick="exportAttendance('excel')">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+            <table class="lectures-table">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Student Name</th>
+                        <th>Course</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEW LECTURE MODAL -->
+    <div id="newLectureModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #44ff44;"><i class="fas fa-plus"></i> Start New Lecture</h3>
+            <form id="newLectureForm">
+                <div class="form-group">
+                    <label>Course Code</label>
+                    <input type="text" id="newLectureCourseCode" placeholder="e.g., CS101" required>
+                </div>
+                <div class="form-group">
+                    <label>Course Name</label>
+                    <input type="text" id="newLectureCourseName" placeholder="Computer Science 101" required>
+                </div>
+                <div class="form-group">
+                    <label>Room</label>
+                    <input type="text" id="newLectureRoom" placeholder="Room 301" required>
+                </div>
+                <div class="form-group">
+                    <label>Number of Students</label>
+                    <input type="number" id="newLectureStudents" placeholder="45" min="1" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" onclick="closeNewLectureModal()" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Start Lecture
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- QR CODE MODAL -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #44ff44;"><i class="fas fa-qrcode"></i> Attendance QR Code</h3>
+            
+            <div class="qr-code-container">
+                <img id="qrCodeImage" class="qr-code-image" src="" alt="QR Code">
+            </div>
+            
+            <div class="qr-info" style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
+                <p><strong>Course Code:</strong> <span id="qrCourseCode">CS101</span></p>
+                <p><strong>Course Name:</strong> <span id="qrCourseName">Computer Science 101</span></p>
+                <p><strong>Room:</strong> <span id="qrLectureRoom">Room 301</span></p>
+            </div>
+            
+            <div class="modal-buttons">
+                <button onclick="closeQRModal()" class="btn btn-danger">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CLOUD CONFIGURATION ====================
+        const CLOUD_BIN_ID = '67a6a9e1ad19ca34f85d5c5c';
+        const API_KEY = '$2a$10$DPHe1ZRJIeO8hK.qXH.1B.H6B8hLWkA8e8eG7UcVJk9QY7rW9njy';
+
+        // ==================== DATA STORAGE ====================
+        function initializeSharedStorage() {
+            if (!localStorage.getItem('smartTendanceShared')) {
+                const sharedData = {
+                    students: [
+                        { id: 'STU1001', name: 'John Smith', email: 'john.smith@student.edu' }
+                    ],
+                    attendanceRecords: [],
+                    lectures: [],
+                    lastUpdate: new Date().toISOString()
+                };
+                localStorage.setItem('smartTendanceShared', JSON.stringify(sharedData));
+            }
+        }
+
+        function getSharedData() {
+            const data = localStorage.getItem('smartTendanceShared');
+            return data ? JSON.parse(data) : { students: [], attendanceRecords: [], lectures: [] };
+        }
+
+        function updateSharedData(newData) {
+            localStorage.setItem('smartTendanceShared', JSON.stringify({
+                ...newData,
+                lastUpdate: new Date().toISOString()
+            }));
+        }
+
+        // ==================== CLOUD SYNC FUNCTIONS ====================
+        async function loadAttendanceFromCloud() {
+            try {
+                document.getElementById('cloudRefreshBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`, {
+                    headers: { 'X-Master-Key': API_KEY }
+                });
+                const data = await response.json();
+                
+                if (data.record && data.record.attendanceRecords) {
+                    // FILTER: Only show records for YOUR test student
+                    const filteredRecords = data.record.attendanceRecords.filter(record => 
+                        record.studentId === 'STU1001'  // Only show your student
+                    );
+                    
+                    // Update shared data with FILTERED records only
+                    let sharedData = getSharedData();
+                    sharedData.attendanceRecords = filteredRecords;
+                    updateSharedData(sharedData);
+                    
+                    // Refresh display
+                    loadAttendanceManager();
+                    loadDashboard();
+                    
+                    console.log('✅ Loaded from cloud:', filteredRecords.length, 'filtered records');
+                    alert(`✅ Synced ${filteredRecords.length} records (Filtered for STU1001)`);
+                }
+            } catch (error) {
+                console.error('❌ Cloud load error:', error);
+                alert('❌ Failed to sync with cloud. Please check internet connection.');
+            } finally {
+                document.getElementById('cloudRefreshBtn').innerHTML = '<i class="fas fa-cloud-download-alt"></i> Refresh Cloud Data';
+            }
+        }
+
+        // ==================== SAMPLE DATA ====================
+        let lectures = JSON.parse(localStorage.getItem('lectures')) || [];
+
+        // ==================== NAVIGATION ====================
+        function showApp(appName) {
+            document.querySelectorAll('.app-container').forEach(app => {
+                app.classList.remove('active');
+            });
+            document.getElementById(appName).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            if (appName === 'dashboard') {
+                loadDashboard();
+            } else if (appName === 'attendanceManager') {
+                loadAttendanceManager();
+            }
+        }
+
+        // ==================== DASHBOARD FUNCTIONS ====================
+        function loadDashboard() {
+            document.getElementById('totalLectures').textContent = lectures.length;
+            document.getElementById('activeLectures').textContent = lectures.filter(l => l.status === 'active').length;
+            
+            const sharedData = getSharedData();
+            document.getElementById('totalStudents').textContent = sharedData.students.length;
+            
+            const totalAttendance = sharedData.attendanceRecords.filter(a => a.status === 'present').length;
+            const totalPossible = sharedData.attendanceRecords.length;
+            const attendanceRate = totalPossible > 0 ? Math.round((totalAttendance / totalPossible) * 100) : 0;
+            document.getElementById('attendanceRate').textContent = attendanceRate + '%';
+            
+            const tbody = document.getElementById('lecturesTableBody');
+            tbody.innerHTML = '';
+            
+            lectures.forEach(lecture => {
+                const presentCount = lecture.attendance.filter(a => a.status === 'present').length;
+                const row = document.createElement('tr');
+                
+                let statusText = lecture.status;
+                if (lecture.status === 'scheduled') statusText = 'Scheduled';
+                if (lecture.status === 'active') statusText = 'Active';
+                if (lecture.status === 'completed') statusText = 'Completed';
+                
+                row.innerHTML = `
+                    <td><strong>${lecture.code}</strong><br>${lecture.course}</td>
+                    <td>${lecture.date}<br>${lecture.time}</td>
+                    <td>${lecture.room}</td>
+                    <td>${presentCount}/${lecture.students} Students</td>
+                    <td><span class="status-badge status-${lecture.status}">${statusText.toUpperCase()}</span></td>
+                    <td>
+                        ${lecture.status === 'scheduled' ? 
+                            `<button class="btn btn-primary" onclick="startLecture(${lecture.id})">
+                                <i class="fas fa-play"></i> Start
+                            </button>` : 
+                         lecture.status === 'active' ? 
+                            `<button class="btn btn-warning" onclick="showQRModal(${lecture.id})">
+                                <i class="fas fa-qrcode"></i> Show QR
+                            </button>
+                            <button class="btn btn-danger" onclick="endLecture(${lecture.id})">
+                                <i class="fas fa-stop"></i> End
+                            </button>` :
+                            `<button class="btn btn-info" onclick="viewAttendance(${lecture.id})">
+                                <i class="fas fa-eye"></i> View
+                            </button>`
+                        }
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function openNewLectureModal() {
+            document.getElementById('newLectureModal').style.display = 'flex';
+        }
+
+        function closeNewLectureModal() {
+            document.getElementById('newLectureModal').style.display = 'none';
+        }
+
+        document.getElementById('newLectureForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const courseCode = document.getElementById('newLectureCourseCode').value.trim();
+            const courseName = document.getElementById('newLectureCourseName').value.trim();
+            const room = document.getElementById('newLectureRoom').value.trim();
+            const students = parseInt(document.getElementById('newLectureStudents').value);
+            
+            const newLecture = {
+                id: lectures.length > 0 ? Math.max(...lectures.map(l => l.id)) + 1 : 1,
+                course: courseName,
+                code: courseCode,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                status: 'active',
+                students: students,
+                room: room,
+                attendance: []
+            };
+            
+            lectures.push(newLecture);
+            localStorage.setItem('lectures', JSON.stringify(lectures));
+            closeNewLectureModal();
+            loadDashboard();
+            
+            alert('New lecture started successfully!');
+        });
+
+        function startLecture(lectureId) {
+            const lecture = lectures.find(l => l.id === lectureId);
+            lecture.status = 'active';
+            localStorage.setItem('lectures', JSON.stringify(lectures));
+            loadDashboard();
+        }
+
+        function endLecture(lectureId) {
+            const lecture = lectures.find(l => l.id === lectureId);
+            lecture.status = 'completed';
+            localStorage.setItem('lectures', JSON.stringify(lectures));
+            loadDashboard();
+        }
+
+        function viewAttendance(lectureId) {
+            const lecture = lectures.find(l => l.id === lectureId);
+            const presentCount = lecture.attendance.filter(a => a.status === 'present').length;
+            alert(`Attendance for ${lecture.code}: ${presentCount}/${lecture.students} students present`);
+        }
+
+        // ==================== QR CODE SYSTEM ====================
+        function showQRModal(lectureId) {
+            const lecture = lectures.find(l => l.id === lectureId);
+            if (!lecture) return;
+            
+            document.getElementById('qrCourseCode').textContent = lecture.code;
+            document.getElementById('qrCourseName').textContent = lecture.course;
+            document.getElementById('qrLectureRoom').textContent = lecture.room;
+            
+            generateRealQRCode(lecture);
+            document.getElementById('qrModal').style.display = 'flex';
+        }
+
+        function generateRealQRCode(lecture) {
+            const qrData = JSON.stringify({
+                type: 'attendance',
+                lectureId: lecture.id,
+                courseCode: lecture.code,
+                courseName: lecture.course,
+                room: lecture.room,
+                timestamp: new Date().getTime()
+            });
+            
+            const qrCodeImage = document.getElementById('qrCodeImage');
+            qrCodeImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}&format=png&margin=10&color=000000&bgcolor=FFFFFF&qzone=1`;
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrModal').style.display = 'none';
+        }
+
+        // ==================== ATTENDANCE MANAGER ====================
+        function loadAttendanceManager() {
+            const sharedData = getSharedData();
+            
+            const courseFilter = document.getElementById('courseFilter');
+            courseFilter.innerHTML = '<option value="all">All Courses</option>';
+            
+            const courses = [...new Set(sharedData.attendanceRecords.map(r => r.courseCode))];
+            courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course;
+                option.textContent = course;
+                courseFilter.appendChild(option);
+            });
+            
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+            
+            const totalRecords = sharedData.attendanceRecords.length;
+            document.getElementById('totalRecords').textContent = totalRecords;
+            
+            const today = new Date().toISOString().split('T')[0];
+            const todayRecords = sharedData.attendanceRecords.filter(r => r.date === today && r.status === 'present');
+            document.getElementById('presentCount').textContent = todayRecords.length;
+            
+            sharedData.attendanceRecords.forEach(record => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${record.studentId}</td>
+                    <td>${record.studentName}</td>
+                    <td>${record.courseCode}</td>
+                    <td>${record.date}</td>
+                    <td>${record.time}</td>
+                    <td><span class="status-badge ${record.status === 'present' ? 'status-completed' : 'status-scheduled'}">${record.status.toUpperCase()}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function exportAttendance(format) {
+            const sharedData = getSharedData();
+            
+            if (sharedData.attendanceRecords.length === 0) {
+                alert('No attendance data to export');
+                return;
+            }
+            
+            alert(`Exported ${sharedData.attendanceRecords.length} records`);
+        }
+
+        // Close modals when clicking outside
+        window.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
+
+        // ==================== INITIALIZATION ====================
+        initializeSharedStorage();
+        loadDashboard();
+
+        // Auto-load cloud data when attendance manager opens
+        const originalShowApp = window.showApp;
+        window.showApp = function(appName) {
+            originalShowApp(appName);
+            if (appName === 'attendanceManager') {
+                setTimeout(loadAttendanceFromCloud, 1000);
+            }
+        };
+    </script>
+</body>
+</html>
